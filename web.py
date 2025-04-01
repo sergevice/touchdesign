@@ -73,19 +73,26 @@ def generate_frames(audio_path, pulse_intensity, colormap):
         plt.savefig(filename, bbox_inches='tight', pad_inches=0)
         plt.close(fig)
 
+from moviepy.editor import ImageSequenceClip, AudioFileClip
+
 def generate_video_with_audio(audio_path, output_path, fps=FPS):
-    cmd = [
-        "ffmpeg", "-y",
-        "-framerate", str(fps),
-        "-i", os.path.join(FRAME_DIR, "frame_%04d.png"),
-        "-i", audio_path,
-        "-c:v", "libx264",
-        "-pix_fmt", "yuv420p",
-        "-c:a", "aac",
-        "-shortest",
-        output_path
-    ]
-    subprocess.run(cmd, check=True)
+    # Collect frame paths
+    frame_files = sorted([
+        os.path.join(FRAME_DIR, fname)
+        for fname in os.listdir(FRAME_DIR)
+        if fname.endswith(".png")
+    ])
+    
+    # Create video from frames
+    clip = ImageSequenceClip(frame_files, fps=fps)
+
+    # Load audio and combine
+    audio = AudioFileClip(audio_path)
+    clip = clip.set_audio(audio)
+
+    # Write output video
+    clip.write_videofile(output_path, codec='libx264', audio_codec='aac')
+
 
 # ========== STREAMLIT APP ==========
 st.set_page_config(page_title="Concentric Audio Visualizer")
